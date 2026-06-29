@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0e" />
+  <title>Unico</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <main id="app">
+    <div class="noise-layer" aria-hidden="true"></div>
+    <div class="scanline-layer" aria-hidden="true"></div>
+
+    <header class="bar">
+      <a class="brand-lockup scene-jump" href="#onair" data-scene="onair" aria-label="Unico on air">
+        <span class="brand-orb" aria-hidden="true"><span class="dot" id="ws-dot" title="WS"></span></span>
+        <span class="brand-copy">
+          <strong>Unico</strong>
+          <span>PRIVATE AI RADIO</span>
+        </span>
+      </a>
+
+      <nav class="scene-nav" aria-label="Unico scenes">
+        <button class="scene-tab active" data-scene="onair" type="button">ON AIR</button>
+        <button class="scene-tab" data-scene="queue" type="button">QUEUE</button>
+        <button class="scene-tab" data-scene="mixer" type="button">MIXER</button>
+        <button class="scene-tab" data-scene="profile" type="button">PROFILE</button>
+      </nav>
+
+      <button class="mobile-menu-button" id="mobile-menu-button" type="button" aria-label="打开菜单" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="status-cluster">
+        <span class="badge" id="src-badge">—</span>
+        <span class="thinking-state" id="thinking-state"></span>
+      </div>
+    </header>
+
+    <nav class="mobile-scene-menu" id="mobile-scene-menu" aria-label="移动端场景菜单">
+      <button class="scene-tab active" data-scene="onair" type="button">ON AIR</button>
+      <button class="scene-tab" data-scene="queue" type="button">QUEUE</button>
+      <button class="scene-tab" data-scene="mixer" type="button">MIXER</button>
+      <button class="scene-tab" data-scene="profile" type="button">PROFILE</button>
+    </nav>
+
+    <div id="claude-banner" hidden>
+      <span class="banner-icon">⚠</span>
+      <span id="claude-banner-msg">AI 模型暂时不可用</span>
+    </div>
+
+    <div class="scene-shell">
+      <section class="scene scene-onair active" data-scene-panel="onair" aria-label="正在播放和对话">
+        <div class="orbital-field" aria-hidden="true">
+          <span class="orbit orbit-a"></span>
+          <span class="orbit orbit-b"></span>
+          <span class="orbit-dot dot-a"></span>
+          <span class="orbit-dot dot-b"></span>
+          <span class="orbit-dot dot-c"></span>
+        </div>
+
+        <div class="onair-layout">
+          <div class="player-column">
+            <div class="vinyl-stage">
+              <div class="vinyl" id="vinyl">
+                <div class="vinyl-disc">
+                  <div class="vinyl-grooves"></div>
+                  <div class="vinyl-cover-wrap">
+                    <img id="cover" alt="" />
+                    <div class="cover-fallback" id="cover-fallback">♪</div>
+                  </div>
+                  <div class="vinyl-center"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="now-meta">
+              <div class="title" id="np-title">未连接</div>
+              <div class="artist" id="np-artist">—</div>
+            </div>
+
+            <div class="wave-console">
+              <canvas id="wave" width="600" height="80" aria-hidden="true"></canvas>
+              <div class="voice-pulse" id="voice-pulse" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+
+            <div class="lyric-stage">
+              <div class="lyric-prev" id="lyric-prev"></div>
+              <div class="lyric-now" id="np-lyric"></div>
+              <div class="lyric-next" id="lyric-next"></div>
+            </div>
+
+            <section class="controls" aria-label="播放控制">
+              <button id="btn-start" class="primary">开始今日电台</button>
+              <button id="btn-play" disabled hidden title="暂停 / 继续">⏯</button>
+              <button id="btn-next" disabled hidden title="下一首">⏭</button>
+              <button id="btn-like" disabled hidden title="喜欢">♡</button>
+              <button id="btn-dislike" disabled title="不喜欢" hidden>⊘</button>
+              <button id="btn-stop" disabled hidden title="关闭电台">✕</button>
+            </section>
+          </div>
+
+          <div class="chat-column">
+            <div class="scene-heading compact">
+              <span>&lt; voice uplink &gt;</span>
+              <h2>CHAT WITH UNICO</h2>
+            </div>
+
+            <div class="mid-header">
+              <div class="mode-switch" role="tablist">
+                <button class="mode-btn active" data-mode="chat" role="tab">对话</button>
+                <button class="mode-btn" data-mode="silent" role="tab">静默</button>
+              </div>
+            </div>
+
+            <div class="stream" id="stream" aria-live="polite"></div>
+
+            <div class="silent-view" id="silent-view" hidden>
+              <div class="silent-cover" id="silent-cover">♪</div>
+              <div class="silent-title" id="silent-title">—</div>
+              <div class="silent-artist" id="silent-artist">—</div>
+              <div class="silent-lyric" id="silent-lyric"></div>
+            </div>
+
+            <form class="chat" id="chat-form" autocomplete="off">
+              <div class="chat-chips" id="chat-chips" hidden></div>
+              <div class="chat-row">
+                <input id="chat-input" type="text" placeholder="和 Unico 说话" />
+                <button type="submit">发送</button>
+              </div>
+            </form>
+          </div>
+
+          <aside class="onair-queue-column" aria-label="本屏曲单">
+            <div class="queue-rail-head">
+              <span>QUEUE SIGNAL</span>
+              <strong>曲单轨道</strong>
+            </div>
+            <div class="queue-rail-body">
+              <section class="rail-block rail-history" aria-label="今晚的曲单">
+                <div class="rail-label">已播</div>
+                <ul class="recent-list" id="recent-list"><li class="empty">还没播过歌</li></ul>
+              </section>
+              <section class="rail-block rail-upcoming" aria-label="待播曲单">
+                <div class="rail-label">下一段</div>
+                <ul class="queue-list" id="queue-list"><li class="empty">开台后生成 5 首新发现</li></ul>
+              </section>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="scene scene-queue" data-scene-panel="queue" aria-label="曲单雷达">
+        <div class="scene-heading">
+          <span>&lt; discovery phase &gt;</span>
+          <h2>QUEUE RADAR</h2>
+        </div>
+
+        <div class="stat-grid hidden-stats" aria-hidden="true">
+          <div class="stat"><div class="stat-num" id="stat-played">0</div><div class="stat-label">已播</div></div>
+          <div class="stat"><div class="stat-num" id="stat-skipped">0</div><div class="stat-label">跳过</div></div>
+          <div class="stat"><div class="stat-num" id="stat-chats">0</div><div class="stat-label">对话</div></div>
+          <div class="stat"><div class="stat-num" id="stat-hit">—</div><div class="stat-label">命中率</div></div>
+          <div class="stat stat-wide"><div class="stat-num" id="session-duration">0 分</div><div class="stat-label">已开台</div></div>
+        </div>
+
+        <div class="deck-grid">
+          <div class="card">
+            <div class="card-title">今晚的曲单</div>
+            <ul class="recent-list"><li class="empty">曲单已移到 ON AIR 同屏显示</li></ul>
+          </div>
+          <div class="card">
+            <div class="card-title">待播曲单</div>
+            <ul class="queue-list"><li class="empty">回到 ON AIR 就能边听边看</li></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene scene-mixer" data-scene-panel="mixer" aria-label="调音台">
+        <div class="scene-heading">
+          <span>&lt; tiny control room &gt;</span>
+          <h2>MIXER</h2>
+        </div>
+
+        <div class="mixer-grid">
+          <div class="card mixer-card">
+            <div class="card-title">调音台</div>
+            <div class="mixer-mascot" aria-hidden="true">
+              <div class="mixer-face">
+                <span></span>
+              </div>
+              <p>我会在 DJ 说话时自动把音乐压低一点，不抢歌。</p>
+            </div>
+            <div class="vol-knob" data-which="music">
+              <button class="vol-emoji vol-icon-music" data-target="music" title="点击静音" aria-label="音乐音量"></button>
+              <div class="vol-meta">
+                <div class="vol-label">音乐</div>
+                <div class="vol-track">
+                  <input type="range" id="vol-music" min="0" max="100" value="100" />
+                  <div class="vol-fill" data-target="music"></div>
+                  <div class="vol-blob" data-target="music"></div>
+                </div>
+              </div>
+              <div class="vol-val" id="vol-music-val">100</div>
+            </div>
+            <div class="vol-knob" data-which="voice">
+              <button class="vol-emoji vol-icon-voice" data-target="voice" title="点击静音" aria-label="DJ 播报音量"></button>
+              <div class="vol-meta">
+                <div class="vol-label">DJ 播报</div>
+                <div class="vol-track">
+                  <input type="range" id="vol-voice" min="0" max="100" value="100" />
+                  <div class="vol-fill" data-target="voice"></div>
+                  <div class="vol-blob" data-target="voice"></div>
+                </div>
+              </div>
+              <div class="vol-val" id="vol-voice-val">100</div>
+            </div>
+            <div class="vol-ducking">
+              <span>说话时音乐自动降到</span>
+              <strong id="duck-target">25%</strong>
+            </div>
+          </div>
+
+          <details class="card card-settings" open>
+            <summary class="card-title">设置</summary>
+            <div class="setting-row">
+              <span>开启中段评论</span>
+              <label class="switch"><input type="checkbox" id="set-midsong" /><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+              <span>主题</span>
+              <select id="set-theme">
+                <option value="amber">像素白（默认）</option>
+                <option value="ink">冷光蓝</option>
+                <option value="cover">封面取色</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <span>TTS 声音</span>
+              <span class="setting-hint" id="tts-provider">Fish 优先</span>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="scene scene-profile" data-scene-panel="profile" aria-label="听众档案">
+        <div class="scene-heading">
+          <span>&lt; listener archive &gt;</span>
+          <h2>PROFILE</h2>
+        </div>
+
+        <div class="profile-grid">
+          <div class="card card-large">
+            <div class="card-title">
+              听众侧写
+              <button class="card-action" id="btn-redraft" title="让 Unico 重新写一份">↻ 重写</button>
+            </div>
+            <div class="taste-preview" id="taste-preview">加载中…</div>
+            <button class="card-link" id="btn-taste-expand">展开全文</button>
+            <div class="taste-feedback">
+              <div class="card-subtitle">最近反馈</div>
+              <ul class="feedback-list" id="feedback-list"><li class="empty">还没有反馈</li></ul>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <audio id="audio-music" preload="auto"></audio>
+    <audio id="audio-voice" preload="auto"></audio>
+
+    <!-- 首次设置向导 -->
+    <div id="setup-overlay" hidden>
+      <div class="setup-card">
+        <section class="setup-step" data-step="welcome">
+          <h2>欢迎来到 Unico</h2>
+          <p class="setup-lead">这是一个能"懂你"的私人电台。在开始之前，需要 3 步：</p>
+          <ol class="setup-list">
+            <li>优先用网易云 App 扫码登录，扫不了就用短信或主页链接</li>
+            <li>让 Unico 读一遍你的歌单和播放记录</li>
+            <li>看它写出来的"听众侧写"，改两笔</li>
+          </ol>
+          <p class="setup-note">数据只存在主人的电脑上，不会上传到任何第三方。</p>
+          <button class="setup-primary" data-go="qr">开始</button>
+        </section>
+
+        <section class="setup-step" data-step="qr" hidden>
+          <h2>扫一下网易云</h2>
+          <p class="setup-lead">打开网易云音乐 App → 点右上角扫一扫 → 对准下面的码</p>
+          <div class="setup-qr" id="setup-qr-img">生成中…</div>
+          <div class="setup-status" id="setup-qr-status">等待扫码…</div>
+          <div class="setup-diagnostic" id="setup-qr-debug"></div>
+          <div class="setup-actions center">
+            <button class="setup-secondary" data-go="sms" type="button">扫码被拦，改用短信</button>
+            <button class="setup-secondary" data-go="public" type="button">先用主页链接导入</button>
+            <button class="setup-secondary" data-go="cookie" type="button">扫码不行，改用 Cookie</button>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="public" hidden>
+          <h2>用主页链接导入</h2>
+          <p class="setup-lead">如果网易云拦截登录，先粘贴你的网易云个人主页链接或用户 ID。Unico 会读取公开歌单，先把电台开起来。</p>
+          <label class="setup-field">
+            <span>网易云主页链接 / 用户 ID</span>
+            <input id="setup-public-uid" type="text" inputmode="text" placeholder="https://music.163.com/#/user/home?id=..." />
+          </label>
+          <p class="setup-note">这条路径不需要登录，所以读不到私密歌单和播放记录；扫码或短信恢复后可以重新导入更完整数据。</p>
+          <div class="setup-actions">
+            <button class="setup-primary" data-go="public-import" type="button">读取公开歌单</button>
+            <button class="setup-secondary" data-go="qr" type="button">返回扫码</button>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="sms" hidden>
+          <h2>用短信登录网易云</h2>
+          <p class="setup-lead">如果扫码被提示环境异常，直接收网易云验证码登录。Unico 只会把登录态保存在本机，用来读取歌单。</p>
+          <div class="setup-field-row">
+            <label class="setup-field small">
+              <span>区号</span>
+              <input id="setup-sms-ctcode" type="text" inputmode="numeric" value="86" autocomplete="tel-country-code" />
+            </label>
+            <label class="setup-field">
+              <span>手机号</span>
+              <input id="setup-sms-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="网易云绑定手机号" />
+            </label>
+          </div>
+          <div class="setup-field-row">
+            <label class="setup-field">
+              <span>验证码</span>
+              <input id="setup-sms-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位验证码" />
+            </label>
+            <button class="setup-secondary setup-inline-button" id="setup-sms-send" data-go="sms-send" type="button">发送验证码</button>
+          </div>
+          <div class="setup-status" id="setup-sms-status"></div>
+          <div class="setup-actions">
+            <button class="setup-primary" data-go="sms-login" type="button">登录并导入</button>
+            <button class="setup-secondary" data-go="qr" type="button">返回扫码</button>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="cookie" hidden>
+          <h2>用 Cookie 导入网易云</h2>
+          <p class="setup-lead">如果扫码和短信都不可用，在电脑浏览器登录 music.163.com，复制 Cookie 里包含 MUSIC_U 的那段粘贴到这里。</p>
+          <textarea id="setup-cookie" rows="7" class="setup-textarea setup-cookie-textarea" placeholder="MUSIC_U=... 或完整 Cookie"></textarea>
+          <p class="setup-note">Cookie 只保存在这台电脑的本地 data/users 目录，用来读取你的歌单和播放记录。</p>
+          <div class="setup-actions">
+            <button class="setup-primary" data-go="cookie-login" type="button">验证并导入</button>
+            <button class="setup-secondary" data-go="qr" type="button">返回扫码</button>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="import" hidden>
+          <h2>正在读你的歌单</h2>
+          <p class="setup-lead" id="setup-import-msg">在拉取自建歌单 + 周榜 + 总榜…</p>
+          <div class="boot-eq" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="drafting" hidden>
+          <h2>Unico 正在认识你</h2>
+          <p class="setup-lead">把你的听歌数据交给 AI，让它写一份"听众侧写"。这一步要等 1-3 分钟。</p>
+          <div class="boot-eq" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="review" hidden>
+          <h2>你看一下，准不准</h2>
+          <p class="setup-lead">这是 Unico 根据你的歌单写的"你是谁"。准的留着，不准的删掉，想补一句就补一句。</p>
+          <textarea id="setup-taste" rows="22" class="setup-textarea"></textarea>
+          <div class="setup-actions">
+            <button class="setup-primary" data-go="save">满意，保存</button>
+            <button class="setup-secondary" data-go="drafting" id="setup-redraft">重新写一份</button>
+          </div>
+        </section>
+
+        <section class="setup-step" data-step="done" hidden>
+          <h2>都好了</h2>
+          <p class="setup-lead">Unico 已经记下了你是怎么听歌的。</p>
+          <button class="setup-primary" data-go="finish">进入电台</button>
+        </section>
+
+        <section class="setup-step" data-step="error" hidden>
+          <h2>出了点状况</h2>
+          <p class="setup-lead" id="setup-error-msg"></p>
+          <button class="setup-primary" data-go="welcome">重新开始</button>
+        </section>
+      </div>
+    </div>
+
+    <!-- 侧写全文弹窗 -->
+    <div id="taste-modal" hidden>
+      <div class="taste-modal-card">
+        <div class="taste-modal-head">
+          <span>听众侧写 · taste.md</span>
+          <button id="taste-modal-close">✕</button>
+        </div>
+        <pre class="taste-modal-body" id="taste-modal-body"></pre>
+      </div>
+    </div>
+
+    <div id="boot-overlay" hidden>
+      <div class="boot-card">
+        <div class="boot-eq" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/src/player.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "unico",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Personal AI radio — Claude Code as brain, NCM as music, Fish as voice.",
+  "scripts": {
+    "dev": "node server/index.js",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "NeteaseCloudMusicApi": "^4.32.0",
+    "qrcode-terminal": "^0.12.0",
+    "undici": "^8.2.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

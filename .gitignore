@@ -1,0 +1,22 @@
+node_modules/
+.env
+.env.*
+!.env.example
+data/
+cache/
+*.log
+.DS_Store
+ai-website-cloner-template/
+.claude/
+user/
+
+# Local editor / OS files
+.idea/
+.vscode/
+*.swp
+
+# Generated media and runtime state
+coverage/
+dist/
+tmp/
+*.local

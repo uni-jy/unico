@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Unico app preview</title>
+  <desc id="desc">A black and white private AI radio interface with vinyl player, chat panel, and queue rail.</desc>
+  <defs>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="1" fill="#fff" opacity=".11"/>
+    </pattern>
+    <pattern id="noise" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="7" r="1" fill="#fff" opacity=".45"/>
+      <circle cx="18" cy="21" r="1" fill="#fff" opacity=".32"/>
+      <circle cx="32" cy="12" r="1" fill="#fff" opacity=".22"/>
+    </pattern>
+    <radialGradient id="glow" cx="50%" cy="52%" r="55%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset=".45" stop-color="#fff" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <style>
+      .bg { fill: #020202; }
+      .panel { fill: rgba(5,5,5,.76); stroke: #d8d8d8; stroke-width: 1; }
+      .soft { stroke: #777; stroke-width: 1; }
+      .fg { fill: #f4f4f4; }
+      .muted { fill: #9b9b9b; }
+      .tiny { font: 18px "Courier New", monospace; letter-spacing: 1px; }
+      .label { font: 24px "Courier New", monospace; font-weight: 700; letter-spacing: 1px; }
+      .title { font: 62px "Courier New", monospace; font-weight: 900; letter-spacing: 2px; }
+      .heading { font: 38px "Courier New", monospace; font-weight: 900; letter-spacing: 1px; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <rect width="1440" height="900" fill="url(#glow)"/>
+  <rect width="1440" height="900" fill="url(#noise)" opacity=".8"/>
+  <rect width="1440" height="900" fill="url(#scan)"/>
+
+  <g transform="translate(70 52)">
+    <text class="title fg" x="0" y="0" dominant-baseline="hanging">UNICO</text>
+    <text class="tiny muted" x="2" y="64" dominant-baseline="hanging">PRIVATE AI RADIO</text>
+  </g>
+
+  <g transform="translate(1090 52)">
+    <rect width="260" height="42" fill="#f4f4f4"/>
+    <text x="130" y="27" text-anchor="middle" class="label" fill="#000">ON AIR</text>
+  </g>
+
+  <g transform="translate(70 160)">
+    <rect class="panel" width="480" height="620"/>
+    <circle cx="240" cy="220" r="164" fill="#151515" stroke="#eee" stroke-width="3"/>
+    <circle cx="240" cy="220" r="144" fill="none" class="soft"/>
+    <circle cx="240" cy="220" r="124" fill="none" class="soft"/>
+    <circle cx="240" cy="220" r="104" fill="none" class="soft"/>
+    <circle cx="240" cy="220" r="84" fill="none" class="soft"/>
+    <circle cx="240" cy="220" r="64" fill="#eee"/>
+    <circle cx="240" cy="220" r="47" fill="#111"/>
+    <circle cx="240" cy="220" r="9" fill="#eee"/>
+    <text class="heading fg" x="72" y="470">WORLD FIRST RAIN</text>
+    <text class="tiny muted" x="74" y="516">NOW PLAYING</text>
+    <g transform="translate(52 560)" fill="#eee">
+      <rect x="0" y="20" width="7" height="42"/><rect x="14" y="0" width="7" height="62"/><rect x="28" y="14" width="7" height="48"/>
+      <rect x="42" y="30" width="7" height="32"/><rect x="56" y="2" width="7" height="60"/><rect x="70" y="22" width="7" height="40"/>
+      <rect x="84" y="9" width="7" height="53"/><rect x="98" y="36" width="7" height="26"/><rect x="112" y="28" width="7" height="34"/>
+      <rect x="126" y="16" width="7" height="46"/><rect x="140" y="6" width="7" height="56"/><rect x="154" y="34" width="7" height="28"/>
+      <rect x="168" y="48" width="7" height="14"/><rect x="182" y="20" width="7" height="42"/><rect x="196" y="8" width="7" height="54"/>
+      <rect x="210" y="36" width="7" height="26"/><rect x="224" y="14" width="7" height="48"/><rect x="238" y="0" width="7" height="62"/>
+      <rect x="252" y="42" width="7" height="20"/><rect x="266" y="28" width="7" height="34"/><rect x="280" y="52" width="7" height="10"/>
+      <rect x="294" y="18" width="7" height="44"/><rect x="308" y="6" width="7" height="56"/><rect x="322" y="30" width="7" height="32"/>
+      <rect x="336" y="46" width="7" height="16"/><rect x="350" y="20" width="7" height="42"/><rect x="364" y="12" width="7" height="50"/>
+    </g>
+  </g>
+
+  <g transform="translate(590 160)">
+    <rect class="panel" width="470" height="620"/>
+    <text class="heading fg" x="38" y="36">CHAT WITH UNICO</text>
+    <rect x="45" y="110" width="300" height="70" fill="#111" stroke="#777"/>
+    <text class="tiny muted" x="65" y="152">VOICE UPLINK</text>
+    <rect x="110" y="212" width="290" height="88" fill="#111" stroke="#999"/>
+    <text class="label fg" x="135" y="264">TELL ME WHAT TO PLAY</text>
+    <rect x="45" y="340" width="350" height="76" fill="#111" stroke="#777"/>
+    <text class="label fg" x="65" y="388">UNICO IS LISTENING</text>
+    <rect x="45" y="530" width="360" height="52" fill="#111" stroke="#aaa"/>
+    <text class="label muted" x="70" y="564">TALK TO UNICO</text>
+  </g>
+
+  <g transform="translate(1090 160)">
+    <rect class="panel" width="280" height="620"/>
+    <text class="heading fg" x="38" y="36">QUEUE</text>
+    <g class="label fg">
+      <rect x="30" y="116" width="210" height="62" fill="#111" stroke="#777"/><rect x="42" y="128" width="38" height="38" fill="#eee"/><text x="100" y="155">NEXT</text>
+      <rect x="30" y="204" width="210" height="62" fill="#111" stroke="#777"/><rect x="42" y="216" width="38" height="38" fill="#eee"/><text x="100" y="243">TRACK 2</text>
+      <rect x="30" y="292" width="210" height="62" fill="#111" stroke="#777"/><rect x="42" y="304" width="38" height="38" fill="#eee"/><text x="100" y="331">TRACK 3</text>
+      <rect x="30" y="380" width="210" height="62" fill="#111" stroke="#777"/><rect x="42" y="392" width="38" height="38" fill="#eee"/><text x="100" y="419">TRACK 4</text>
+      <rect x="30" y="468" width="210" height="62" fill="#111" stroke="#777"/><rect x="42" y="480" width="38" height="38" fill="#eee"/><text x="100" y="507">TRACK 5</text>
+    </g>
+  </g>
+
+  <text class="label muted" x="88" y="850">LOCAL-FIRST AI RADIO</text>
+  <text class="tiny muted" x="910" y="850">NETEASE CLOUD MUSIC · LLM · TTS</text>
+</svg>
