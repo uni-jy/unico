@@ -6,7 +6,9 @@
   "description": "Personal AI radio — Claude Code as brain, NCM as music, Fish as voice.",
   "scripts": {
     "dev": "node server/index.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "dependencies": {
     "NeteaseCloudMusicApi": "^4.32.0",
@@ -16,5 +18,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "wrangler": "^4.106.0"
   }
 }
