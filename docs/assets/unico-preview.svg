@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
   <title id="title">Unico app preview</title>
-  <desc id="desc">A black and white private AI radio interface with vinyl player, chat panel, and queue rail.</desc>
+  <desc id="desc">A black and white private AI radio interface powered by Seed 2.1 Pro, with vinyl player, chat panel, and queue rail.</desc>
   <defs>
     <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
       <rect width="4" height="1" fill="#fff" opacity=".11"/>
@@ -94,5 +94,5 @@
   </g>
 
   <text class="label muted" x="88" y="850">LOCAL-FIRST AI RADIO</text>
-  <text class="tiny muted" x="910" y="850">NETEASE CLOUD MUSIC · LLM · TTS</text>
+  <text class="tiny muted" x="830" y="850">NETEASE CLOUD MUSIC · SEED 2.1 PRO · TTS</text>
 </svg>

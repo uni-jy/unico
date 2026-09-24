@@ -21,3 +21,7 @@ What alternatives have you considered?
 ## Notes
 
 Any sketches, examples, or implementation notes are welcome.
+
+## Model or privacy impact
+
+Does this change affect Seed prompts, generated speech, or local user data? If yes, describe the impact.

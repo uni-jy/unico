@@ -26,6 +26,7 @@ What did you expect to happen?
 - Node.js version:
 - Browser:
 - Unico commit:
+- LLM model / endpoint (do not include the API key):
 
 ## Logs or screenshots
 

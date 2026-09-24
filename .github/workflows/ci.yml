@@ -16,6 +16,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Verify Seed defaults without making a network request
+        run: node --input-type=module -e "import { getLLMConfig } from './server/llm-client.js'; const c = getLLMConfig({}); if (c.model !== 'doubao-seed-2-1-pro-260915') process.exit(1);"
       - run: node --test tests/*.test.js
       - run: node --check server/setup-api.js
       - run: node --check pwa/src/player.js

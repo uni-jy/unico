@@ -10,6 +10,7 @@ We want Unico to be a welcoming project for people building personal, local-firs
 - Assume good intent, but accept feedback when impact differs from intent.
 - Keep discussions focused on the project and its users.
 - Respect privacy. Do not ask contributors to share private cookies, keys, playlists, or account data in public issues.
+- Do not paste Seed / Volcengine API keys or generated listener data into public issues or pull requests.
 
 ## Unacceptable Behavior
 
