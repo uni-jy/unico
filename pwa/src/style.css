@@ -250,6 +250,24 @@ button:disabled {
   gap: 10px;
 }
 
+.window-toggle {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: var(--fg);
+  border: 1px solid var(--border-soft);
+}
+
+.window-toggle:hover,
+.window-toggle.active,
+#btn-window-inline.active {
+  background: var(--fg);
+  color: #000;
+  border-color: var(--fg);
+}
+
 .badge {
   max-width: 150px;
   overflow: hidden;
@@ -905,6 +923,131 @@ button:disabled {
 .controls button#btn-like.active {
   color: var(--bad);
   border-color: var(--bad);
+}
+
+body.window-mode #app {
+  min-height: 420px;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255,255,255,0.14), transparent 24%),
+    #000;
+}
+
+body.window-mode .bar,
+body.window-mode .mobile-scene-menu,
+body.window-mode .orbital-field,
+body.window-mode .onair-queue-column,
+body.window-mode .scene-queue,
+body.window-mode .scene-mixer,
+body.window-mode .scene-profile,
+body.window-mode .scene-heading,
+body.window-mode .mid-header,
+body.window-mode .chat {
+  display: none !important;
+}
+
+body.window-mode .scene-shell {
+  height: 100svh;
+  padding: 0;
+}
+
+body.window-mode .scene,
+body.window-mode .scene-onair.active {
+  position: relative;
+  inset: auto;
+  height: 100svh;
+  display: block;
+}
+
+body.window-mode .onair-layout {
+  height: 100svh;
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(250px, 1fr) minmax(92px, 0.34fr);
+  padding: 14px;
+}
+
+body.window-mode .player-column {
+  grid-row: auto;
+  grid-template-rows: minmax(118px, 1fr) auto auto minmax(42px, auto) auto;
+  padding: 8px 10px 10px;
+}
+
+body.window-mode .player-column::after,
+body.window-mode .chat-column::after {
+  display: none;
+}
+
+body.window-mode .vinyl-stage,
+body.window-mode .vinyl {
+  width: min(52vw, 168px);
+  height: min(52vw, 168px);
+}
+
+body.window-mode .now-meta {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+body.window-mode .now-meta .title {
+  font-size: 20px;
+}
+
+body.window-mode .now-meta .artist {
+  margin-top: 5px;
+  font-size: 11px;
+}
+
+body.window-mode #wave {
+  height: 34px;
+}
+
+body.window-mode .lyric-stage {
+  min-height: 44px;
+  gap: 4px;
+}
+
+body.window-mode .lyric-prev,
+body.window-mode .lyric-next {
+  display: none;
+}
+
+body.window-mode .lyric-now {
+  font-size: 13px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+body.window-mode .controls {
+  gap: 6px;
+}
+
+body.window-mode .controls button {
+  min-height: 34px;
+  min-width: 38px;
+  padding: 6px 9px;
+}
+
+body.window-mode .controls .primary {
+  min-width: 132px;
+}
+
+body.window-mode .chat-column {
+  min-height: 0;
+  padding: 0 10px 8px;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+body.window-mode .stream {
+  min-height: 0;
+  padding: 0;
+  font-size: 11px;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 100%);
+}
+
+body.window-mode .bubble {
+  margin-bottom: 6px;
+  padding: 7px 8px;
 }
 
 .mid-header {

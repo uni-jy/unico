@@ -2,19 +2,18 @@
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { getTenant } from "./tenant.js";
 import { askRaw } from "./claude.js";
+import { DATA_DIR } from "./paths.js";
+import { persistUserFiles } from "./user-storage.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
 const require = createRequire(import.meta.url);
 const ncm = require("NeteaseCloudMusicApi");
 const QRCode = require("qrcode");
 
 function loadQrDeviceId() {
-  const devicePath = path.join(ROOT, "data", "ncm-qr-device-id.txt");
+  const devicePath = path.join(DATA_DIR, "ncm-qr-device-id.txt");
   try {
     const existing = fsSync.readFileSync(devicePath, "utf8").trim();
     if (/^[A-F0-9]{52}$/.test(existing)) return existing;
@@ -138,6 +137,7 @@ async function saveVerifiedCookie(t, uid, cookie, source = "login") {
     t.settings.nickname = profile.nickname;
     t.saveSettings();
   }
+  await persistUserFiles(uid);
   console.log(`[setup ${uid}] ${source} ok: ${profile.nickname} (${profile.userId})`);
   return profile;
 }
@@ -431,6 +431,7 @@ export async function handle(req, res, uid, url) {
         t.settings.nickname = data.profile.nickname;
         t.saveSettings();
       }
+      await persistUserFiles(uid);
       console.log(`[setup ${uid}] public-import ok: ${data.profile.nickname || ncmUid} (${data.created.length} created)`);
       return json(res, 200, {
         ok: true,
@@ -473,6 +474,7 @@ export async function handle(req, res, uid, url) {
         t.settings.nickname = profile.nickname;
         t.saveSettings();
       }
+      await persistUserFiles(uid);
       return json(res, 200, {
         ok: true,
         nickname: profile.nickname,
@@ -557,6 +559,7 @@ export async function handle(req, res, uid, url) {
       catch {
         await fs.writeFile(t.routinesPath, "# 日常节律\n\n- 07:00 起床\n- 09:00 早间节目\n- 18:30 通勤\n- 23:00 深夜\n", "utf8");
       }
+      await persistUserFiles(uid);
       console.log(`[setup ${uid}] taste 已保存 ${taste.length} 字`);
       return json(res, 200, { ok: true });
     }

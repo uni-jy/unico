@@ -1,5 +1,9 @@
 // 必须作为 server/index.js 的第一个 import —— 在 ncm/axios 等模块加载前清理代理 env
-process.loadEnvFile?.(".env");
+import fs from "node:fs";
+
+if (fs.existsSync(".env")) {
+  process.loadEnvFile?.(".env");
+}
 for (const k of ["HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy", "ALL_PROXY", "all_proxy"]) {
   delete process.env[k];
 }

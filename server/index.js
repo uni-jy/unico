@@ -5,7 +5,6 @@ import "./_env.js";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import { handleChat } from "./router.js";
 import { synth } from "./tts.js";
@@ -13,12 +12,14 @@ import { resolveOne, lyric as ncmLyric } from "./adapters/ncm.js";
 import { askIntro, askIntroStreaming, askTalk, askTalkStreaming, breaker as claudeBreaker } from "./claude.js";
 import { getTenant, listTenants, newGuestUid, OWNER_UID } from "./tenant.js";
 import { BOOT_MIN_QUEUE, QUEUE_TARGET, buildKnownTrackSet, filterUnheardCandidates } from "./playlist-policy.js";
+import { loadPlaybackState, savePlaybackState } from "./playback-state.js";
+import { CODE_ROOT, TTS_DIR, USERS_DIR } from "./paths.js";
+import { hydrateUserFiles, persistUserFiles } from "./user-storage.js";
+import { readTtsFile } from "./tts-storage.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = CODE_ROOT;
 const PWA_DIR = path.join(ROOT, "pwa");
 const MEDIA_DIR = path.join(ROOT, "media");
-const TTS_DIR = path.join(ROOT, "cache/tts");
 const PORT = Number(process.env.PORT || 8080);
 
 const MIME = {
@@ -586,6 +587,25 @@ function send(res, code, body, headers = {}) {
   res.end(body);
 }
 
+function readJsonBody(req, limit = 128 * 1024) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk) => {
+      raw += chunk;
+      if (raw.length > limit) {
+        reject(new Error("body too large"));
+        req.destroy();
+      }
+    });
+    req.on("end", () => {
+      if (!raw.trim()) return resolve({});
+      try { resolve(JSON.parse(raw)); }
+      catch { reject(new Error("invalid json")); }
+    });
+    req.on("error", reject);
+  });
+}
+
 function parseCookies(header) {
   const out = {};
   if (!header) return out;
@@ -668,7 +688,44 @@ function serveFile(req, res, absPath) {
   });
 }
 
-const server = http.createServer((req, res) => {
+function serveAudioBuffer(req, res, buffer, type) {
+  const size = buffer.length;
+  const range = req.headers.range;
+  if (range) {
+    const m = /bytes=(\d*)-(\d*)/.exec(range);
+    const start = m && m[1] ? parseInt(m[1], 10) : 0;
+    const end = m && m[2] ? Math.min(parseInt(m[2], 10), size - 1) : size - 1;
+    if (!m || start > end || start >= size) {
+      res.writeHead(416, {
+        "Cache-Control": "no-store",
+        "Content-Range": `bytes */${size}`,
+      });
+      return res.end();
+    }
+    res.writeHead(206, {
+      "Content-Type": type,
+      "Cache-Control": "no-store",
+      "Content-Range": `bytes ${start}-${end}/${size}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": end - start + 1,
+    });
+    return res.end(buffer.subarray(start, end + 1));
+  }
+  res.writeHead(200, {
+    "Content-Type": type,
+    "Content-Length": size,
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "no-store",
+  });
+  res.end(buffer);
+}
+
+async function loadTenant(uid) {
+  await hydrateUserFiles(uid);
+  return getTenant(uid);
+}
+
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
 
@@ -695,13 +752,15 @@ const server = http.createServer((req, res) => {
   // ---- setup API（首次向导） ----
   if (pathname.startsWith("/api/setup/")) {
     const uid = ensureUidCookie(req, res);
-    return import("./setup-api.js").then((m) => m.handle(req, res, uid, url));
+    await hydrateUserFiles(uid);
+    const m = await import("./setup-api.js");
+    return m.handle(req, res, uid, url);
   }
 
   // ---- 反馈摘要（本人可看） ----
   if (pathname === "/api/me") {
     const uid = ensureUidCookie(req, res);
-    const t = getTenant(uid);
+    const t = await loadTenant(uid);
     return send(res, 200, JSON.stringify({
       uid: t.uid, displayName: t.displayName, hasSetup: t.hasSetup(),
       settings: t.settings, isOwner: uid === OWNER_UID,
@@ -711,10 +770,36 @@ const server = http.createServer((req, res) => {
   // ---- 听众侧写（本人可看） ----
   if (pathname === "/api/me/taste") {
     const uid = ensureUidCookie(req, res);
-    const t = getTenant(uid);
+    const t = await loadTenant(uid);
     const taste = t.readFile(t.tastePath);
     return send(res, 200, JSON.stringify({ taste }),
       { "Content-Type": "application/json; charset=utf-8" });
+  }
+
+  if (pathname === "/api/playback-state") {
+    const uid = ensureUidCookie(req, res);
+    const t = await loadTenant(uid);
+    if (req.method === "GET") {
+      return send(res, 200, JSON.stringify(loadPlaybackState(t)), {
+        "Content-Type": "application/json; charset=utf-8",
+      });
+    }
+    if (req.method === "PUT") {
+      return readJsonBody(req)
+        .then(async (body) => {
+          const state = savePlaybackState(t, body);
+          await persistUserFiles(uid);
+          return send(res, 200, JSON.stringify(state), {
+            "Content-Type": "application/json; charset=utf-8",
+          });
+        })
+        .catch((e) => send(res, 400, JSON.stringify({ error: e.message }), {
+          "Content-Type": "application/json; charset=utf-8",
+        }));
+    }
+    return send(res, 405, JSON.stringify({ error: "method not allowed" }), {
+      "Content-Type": "application/json; charset=utf-8",
+    });
   }
 
   if (pathname.startsWith("/media/")) {
@@ -727,6 +812,15 @@ const server = http.createServer((req, res) => {
     const rel = pathname.replace(/^\/tts\//, "");
     const abs = path.join(TTS_DIR, rel);
     if (!abs.startsWith(TTS_DIR)) return send(res, 403, "Forbidden");
+    if (fs.existsSync(abs)) return serveFile(req, res, abs);
+    const cached = await readTtsFile(rel).catch((e) => {
+      console.warn(`[tts/blob] serve ${rel}: ${e.message}`);
+      return null;
+    });
+    if (cached?.buffer) {
+      const type = cached.contentType || MIME[path.extname(rel).toLowerCase()] || "application/octet-stream";
+      return serveAudioBuffer(req, res, cached.buffer, type);
+    }
     return serveFile(req, res, abs);
   }
   if (pathname === "/proxy/audio") {
@@ -748,7 +842,7 @@ const server = http.createServer((req, res) => {
 // ---- WebSocket ----
 const wss = new WebSocketServer({ server, path: "/stream" });
 let _nextClientId = 0;
-wss.on("connection", (ws, req) => {
+wss.on("connection", async (ws, req) => {
   // 从 cookie 取 uid（WS upgrade 请求带的）
   const cookies = parseCookies(req.headers.cookie);
   let uid = cookies["unico-uid"];
@@ -757,7 +851,13 @@ wss.on("connection", (ws, req) => {
     ws.close();
     return;
   }
-  const t = getTenant(uid);
+  const t = await loadTenant(uid);
+  const persisted = loadPlaybackState(t);
+  if (persisted.currentTrack?.url && t.nowPlaying?.source === "local") {
+    t.nowPlaying = persisted.currentTrack;
+    t.queue = Array.isArray(persisted.queue) ? persisted.queue : [];
+    t.playState.paused = persisted.paused !== false;
+  }
   ws._id = ++_nextClientId;
   ws._uid = uid;
   t.clients.add(ws);
@@ -913,10 +1013,19 @@ wss.on("connection", (ws, req) => {
 });
 
 // 预热：owner tenant 启动时就加载好
-if (fs.existsSync(path.join(ROOT, "data/users/owner"))) {
+if (fs.existsSync(path.join(USERS_DIR, OWNER_UID))) {
   getTenant(OWNER_UID);
 }
 
-server.listen(PORT, () => {
-  console.log(`[unico] http://localhost:${PORT}  ws://localhost:${PORT}/stream`);
-});
+export function startServer(port = PORT) {
+  return server.listen(port, () => {
+    console.log(`[unico] http://localhost:${port}  ws://localhost:${port}/stream`);
+  });
+}
+
+export { server };
+export default server;
+
+if (process.env.UNICO_AUTOSTART !== "0") {
+  startServer(PORT);
+}

@@ -1,5 +1,7 @@
 // Unico PWA player
+import { unlockAudioElement } from "./audio-unlock.js";
 import { createBufferedSender } from "./ws-send.js";
+import { buildPopoutFeatures, buildWindowUrl, getInitialWindowMode, setWindowModePreference } from "./window-mode.js";
 const $ = (id) => document.getElementById(id);
 const music = $("audio-music");
 const voice = $("audio-voice");
@@ -25,6 +27,43 @@ function savePrefs() {
   localStorage.setItem("unico.scene", prefs.scene);
 }
 
+function setWindowMode(enabled, { persist = true } = {}) {
+  document.body.classList.toggle("window-mode", !!enabled);
+  document.querySelectorAll("#btn-window-mode, #btn-window-inline").forEach((btn) => {
+    if (!btn) return;
+    btn.classList.toggle("active", !!enabled);
+    btn.title = enabled ? "退出窗口模式" : "窗口模式";
+    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+  });
+  if (persist) setWindowModePreference(!!enabled);
+}
+
+function toggleWindowMode() {
+  const inPopout = new URLSearchParams(location.search).get("window") === "1";
+  if (inPopout) {
+    setWindowMode(false);
+    setWindowModePreference(false);
+    location.href = location.origin + location.pathname;
+    return;
+  }
+
+  if (popoutWindow && !popoutWindow.closed) {
+    popoutWindow.focus();
+    return;
+  }
+
+  const url = buildWindowUrl(location.href);
+  popoutWindow = window.open(url, "unico-player-window", buildPopoutFeatures());
+  if (popoutWindow) {
+    popoutWindow.focus();
+  } else {
+    setWindowMode(true);
+    history.replaceState(null, "", url);
+  }
+}
+
+setWindowMode(getInitialWindowMode(location.search), { persist: false });
+
 let started = false;
 let serverPaused = true;
 let ws;
@@ -32,6 +71,9 @@ let currentTrack = null;
 let voiceTimer = null;
 let isActive = false;
 let isDucking = false;
+let restoredPlayback = null;
+let savePlaybackTimer = null;
+let popoutWindow = null;
 const bufferedSender = createBufferedSender(() => ws);
 
 // —— 会话统计
@@ -144,6 +186,16 @@ function applyVolumes() {
   music.volume = prefs.musicVolume * (isDucking ? DUCK_FACTOR : 1);
   voice.volume = prefs.voiceVolume;
 }
+let voiceMuteWarningShown = false;
+function warnIfVoiceMuted() {
+  if (prefs.voiceVolume > 0) {
+    voiceMuteWarningShown = false;
+    return;
+  }
+  if (voiceMuteWarningShown) return;
+  voiceMuteWarningShown = true;
+  sys("DJ 播报音量是 0，请到 MIXER 把 DJ 播报音量调高。");
+}
 function setDuck(on) {
   const wasDucking = isDucking;
   isDucking = !!on;
@@ -153,6 +205,12 @@ function setDuck(on) {
   fadeMusicTo(prefs.musicVolume * (isDucking ? DUCK_FACTOR : 1));
 }
 applyVolumes();
+
+function prepareVoicePlayback() {
+  ensureAudioGraph();
+  resumeAudioCtx();
+  void unlockAudioElement(voice).finally(applyVolumes);
+}
 
 // ===== streaming DJ chunks =====
 // 每段 stream（一首歌的 intro 或一条 talk 回复）一个 live bubble + 一个音频队列
@@ -368,6 +426,9 @@ function tickLyric() {
   }
 }
 music.addEventListener("timeupdate", tickLyric);
+setInterval(() => {
+  if (currentTrack?.url) savePlaybackStateSoon();
+}, 15000);
 
 // ===== wave canvas =====
 const canvas = $("wave");
@@ -488,6 +549,76 @@ function proxiedUrl(rawUrl) {
   return rawUrl;
 }
 
+function compactTrackForState(track) {
+  if (!track || (!track.title && !track.url)) return null;
+  return {
+    id: track.id || "",
+    title: track.title || "",
+    artist: track.artist || "",
+    url: track.url || "",
+    picUrl: track.picUrl || "",
+    source: track.source || "",
+    duration: track.duration || 0,
+    reason: track.reason || track.pickReason || "",
+    exploration: !!track.exploration,
+  };
+}
+
+function savePlaybackStateSoon() {
+  if (savePlaybackTimer) clearTimeout(savePlaybackTimer);
+  savePlaybackTimer = setTimeout(() => {
+    const current = compactTrackForState(currentTrack);
+    fetch("/api/playback-state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        started,
+        paused: serverPaused,
+        progressSeconds: Math.floor(music.currentTime || 0),
+        currentTrack: current,
+        queue: session.queue.map(compactTrackForState).filter(Boolean),
+      }),
+    }).catch(() => {});
+  }, 700);
+}
+
+async function restorePlaybackState() {
+  try {
+    const r = await fetch("/api/playback-state");
+    const state = await r.json();
+    if (!state?.currentTrack?.url) return;
+    restoredPlayback = state;
+    started = !!state.started;
+    serverPaused = state.paused !== false;
+    session.queue = Array.isArray(state.queue) ? state.queue : [];
+    setControlsActive(started);
+    setNow(state.currentTrack);
+    if (state.progressSeconds && Number.isFinite(state.progressSeconds)) {
+      const seekTo = Math.max(0, state.progressSeconds);
+      const applySeek = () => {
+        try { music.currentTime = seekTo; } catch {}
+      };
+      if (music.readyState > 0) applySeek();
+      else music.addEventListener("loadedmetadata", applySeek, { once: true });
+    }
+    renderQueue();
+    sys("已恢复上次播放现场");
+  } catch {}
+}
+
+function updateMediaSession(track) {
+  if (!("mediaSession" in navigator) || !track) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title || "Unico",
+    artist: track.artist || "",
+    album: "Unico",
+    artwork: track.picUrl ? [{ src: track.picUrl }] : [],
+  });
+  navigator.mediaSession.setActionHandler("play", () => send({ type: "control", action: "play" }));
+  navigator.mediaSession.setActionHandler("pause", () => send({ type: "control", action: "pause" }));
+  navigator.mediaSession.setActionHandler("nexttrack", () => send({ type: "feedback", action: "skip" }));
+}
+
 function syncNowTitleMarquee() {
   const el = $("np-title");
   if (!el) return;
@@ -518,6 +649,7 @@ function setNow(track) {
   $("silent-artist").textContent = track.artist || "—";
   $("src-badge").textContent = (track.exploration ? "✦ " : "") + (track.source || "—");
   setCover(track.picUrl || "");
+  updateMediaSession(track);
   setLyric(null);
   if (!isActive) return;
   const playUrl = proxiedUrl(track.url);
@@ -527,6 +659,7 @@ function setNow(track) {
     applyMusicState();
   }
   scheduleVoice(track.sayUrl, track.sayDelayMs);
+  savePlaybackStateSoon();
 }
 
 function applyMusicState() {
@@ -833,7 +966,9 @@ function connectWS() {
     if (firstWSOpen) {
       firstWSOpen = false;
       send({ type: "claim" });
-      send({ type: "control", action: "reset" });
+      if (!restoredPlayback?.currentTrack?.url) {
+        send({ type: "control", action: "reset" });
+      }
     }
   };
   ws.onclose = () => {
@@ -849,7 +984,7 @@ function connectWS() {
       isActive = !!m.active;
       sys(isActive ? "拿到播放权（这台出声）" : "已转给另一端，这台静音");
       applyRole();
-      if (isActive && currentTrack?.url) { music.src = currentTrack.url; applyMusicState(); }
+      if (isActive && currentTrack?.url) { music.src = proxiedUrl(currentTrack.url); applyMusicState(); }
     }
     if (m.type === "now") {
       setNow(m.track);
@@ -868,6 +1003,7 @@ function connectWS() {
       session.queue = Array.isArray(m.tracks) ? m.tracks : [];
       session.queueLoading = !!m.loading;
       renderQueue();
+      savePlaybackStateSoon();
       if (!session.queueLoading && (!currentTrack?.url || currentTrack.title === "Unico 待机")) hideBoot();
     }
     if (m.type === "dj-chunk") {
@@ -884,9 +1020,12 @@ function connectWS() {
     }
     if (m.type === "dj-chunk-audio") {
       if (m.trackId !== djStream.trackId) return;
-      if (m.sayUrl) queueDjAudio(m.idx, m.sayUrl);
+      if (m.sayUrl) {
+        warnIfVoiceMuted();
+        queueDjAudio(m.idx, m.sayUrl);
+      }
     }
-    if (m.type === "state") { serverPaused = !!m.paused; applyMusicState(); }
+    if (m.type === "state") { serverPaused = !!m.paused; applyMusicState(); savePlaybackStateSoon(); }
     if (m.type === "lyric") {
       if (currentTrack && (m.trackId === currentTrack.id || !currentTrack.id)) {
         setLyric(m.lines);
@@ -1024,10 +1163,8 @@ $("btn-start").addEventListener("click", () => {
   setControlsActive(true);
   $("btn-start").disabled = true;
   $("btn-start").hidden = true;
-  ensureAudioGraph();
-  resumeAudioCtx();
+  prepareVoicePlayback();
   music.play().then(() => music.pause()).catch(() => {});
-  voice.play().then(() => voice.pause()).catch(() => {});
   send({ type: "claim" });
   send({ type: "control", action: "start-radio" });
   startSession();
@@ -1036,10 +1173,13 @@ $("btn-play").addEventListener("click", () => send({ type: "control", action: "t
 $("btn-next").addEventListener("click", () => send({ type: "feedback", action: "skip" }));
 $("btn-like").addEventListener("click", () => send({ type: "feedback", action: "like" }));
 $("btn-dislike").addEventListener("click", () => send({ type: "feedback", action: "dislike" }));
+$("btn-window-mode")?.addEventListener("click", toggleWindowMode);
+$("btn-window-inline")?.addEventListener("click", toggleWindowMode);
 $("btn-stop").addEventListener("click", () => {
   send({ type: "control", action: "reset" });
   started = false;
   setControlsActive(false);
+  savePlaybackStateSoon();
   $("btn-start").disabled = false;
   $("btn-start").hidden = false;
   $("btn-start").textContent = "开始今日电台";
@@ -1059,10 +1199,8 @@ document.getElementById("chat-form").addEventListener("submit", (e) => {
     setControlsActive(true);
     $("btn-start").disabled = true;
     $("btn-start").hidden = true;
-    ensureAudioGraph();
-    resumeAudioCtx();
+    prepareVoicePlayback();
     music.play().then(() => music.pause()).catch(() => {});
-    voice.play().then(() => voice.pause()).catch(() => {});
     startSession();
   }
 });
@@ -1171,7 +1309,11 @@ function showSetup(initialStep = "welcome") {
 }
 function hideSetup() {
   setupOverlay.setAttribute("hidden", "");
+  stopSetupBackgroundTasks();
+}
+function stopSetupBackgroundTasks() {
   if (setupQRPollTimer) { clearTimeout(setupQRPollTimer); setupQRPollTimer = null; }
+  setupSid = null;
   if (setupSmsCooldownTimer) { clearInterval(setupSmsCooldownTimer); setupSmsCooldownTimer = null; }
 }
 function setupError(msg) {
@@ -1268,6 +1410,7 @@ async function setupPollQR() {
 }
 
 async function setupCookieLogin() {
+  stopSetupBackgroundTasks();
   const cookie = $("setup-cookie").value.trim();
   if (!cookie) {
     alert("请粘贴包含 MUSIC_U 的 Cookie");
@@ -1345,6 +1488,7 @@ async function setupSmsSend() {
 }
 
 async function setupSmsLogin() {
+  stopSetupBackgroundTasks();
   const payload = getSmsPayload();
   if (!payload.phone || !payload.captcha) {
     alert("请输入手机号和短信验证码");
@@ -1367,6 +1511,7 @@ async function setupSmsLogin() {
 }
 
 async function setupPublicImport() {
+  stopSetupBackgroundTasks();
   const uid = $("setup-public-uid").value.trim();
   if (!uid) {
     alert("请粘贴网易云个人主页链接，或输入用户 ID");
@@ -1436,6 +1581,7 @@ async function setupSave() {
       body: JSON.stringify({ taste }),
     });
     if (!ok) throw new Error(d.error || "保存失败");
+    stopSetupBackgroundTasks();
     gotoStep("done");
   } catch (e) {
     setupError("保存失败：" + e.message);
@@ -1456,7 +1602,18 @@ document.querySelectorAll("[data-go]").forEach((btn) => {
     else if (go === "cookie-login") setupCookieLogin();
     else if (go === "drafting") setupRunDraft();
     else if (go === "save") setupSave();
-    else if (go === "finish") { hideSetup(); location.reload(); }
+    else if (go === "finish") {
+      hideSetup();
+      loadTaste();
+      started = true;
+      setControlsActive(true);
+      $("btn-start").disabled = true;
+      $("btn-start").hidden = true;
+      prepareVoicePlayback();
+      send({ type: "claim" });
+      send({ type: "control", action: "start-radio" });
+      startSession();
+    }
   });
 });
 
@@ -1491,4 +1648,4 @@ if ("serviceWorker" in navigator) {
   }).catch(() => {});
 }
 
-connectWS();
+restorePlaybackState().finally(connectWS);

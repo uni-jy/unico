@@ -2,11 +2,7 @@
 // uid 通过 cookie 持久化在浏览器，server 进程内 Map<uid, Tenant>。
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
-const USERS_DIR = path.join(ROOT, "data/users");
+import { USERS_DIR } from "./paths.js";
 
 const _tenants = new Map();
 
@@ -15,6 +11,7 @@ export const OWNER_UID = "owner";  // 宿主自己的固定 uid
 export function getTenant(uid) {
   if (!uid) throw new Error("uid required");
   if (!_tenants.has(uid)) _tenants.set(uid, new Tenant(uid));
+  else _tenants.get(uid).reloadFromDisk();
   return _tenants.get(uid);
 }
 
@@ -41,6 +38,7 @@ export class Tenant {
     this.playlistsMdPath = path.join(this.dir, "playlists.md");
     this.feedbackPath = path.join(this.dir, "feedback.jsonl");
     this.playsPath = path.join(this.dir, "plays.jsonl");
+    this.playbackStatePath = path.join(this.dir, "playback-state.json");
     this.cookiePath = path.join(this.dir, "ncm-cookie.txt");
     this.settingsPath = path.join(this.dir, "settings.json");
 
@@ -74,6 +72,11 @@ export class Tenant {
 
     this.welcomePool = [];
     this.loadWelcomePool();
+  }
+
+  reloadFromDisk() {
+    this.settings = this.loadSettings();
+    this.loadWelcomePool({ log: false });
   }
 
   loadSettings() {
@@ -133,7 +136,7 @@ export class Tenant {
     }
   }
 
-  loadWelcomePool() {
+  loadWelcomePool({ log = true } = {}) {
     try {
       const raw = fs.readFileSync(this.playlistsJsonPath, "utf8");
       const data = JSON.parse(raw);
@@ -154,7 +157,7 @@ export class Tenant {
         })
         .slice(0, 50)
         .map(s => `${s.title} ${s.artist}`);
-      console.log(`[tenant ${this.uid}] welcome pool: ${this.welcomePool.length}`);
+      if (log) console.log(`[tenant ${this.uid}] welcome pool: ${this.welcomePool.length}`);
     } catch {
       this.welcomePool = ["晚春 腰乐队", "山谷 東方红Red East", "理想三旬 陈鸿宇"];
     }

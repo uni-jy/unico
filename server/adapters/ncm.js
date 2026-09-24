@@ -3,12 +3,11 @@
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { DATA_DIR } from "../paths.js";
 const require = createRequire(import.meta.url);
 const ncm = require("NeteaseCloudMusicApi");
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const COOKIE_PATH = path.resolve(__dirname, "../../data/ncm-cookie.txt");
+const COOKIE_PATH = path.join(DATA_DIR, "ncm-cookie.txt");
 let _cookie = "";
 try { _cookie = fs.readFileSync(COOKIE_PATH, "utf8").trim(); } catch {}
 

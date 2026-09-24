@@ -5,12 +5,8 @@ import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
-const CACHE_DIR = path.join(ROOT, "cache/tts");
-const TMP_DIR = path.join(ROOT, "cache/tmp");
+import { TTS_DIR as CACHE_DIR, TMP_DIR } from "./paths.js";
+import { persistTtsFile, readTtsFile } from "./tts-storage.js";
 
 const FISH_API = "https://api.fish.audio/v1/tts";
 // 一旦命中 402 就标记为不可用，本次进程内不再重试
@@ -89,6 +85,25 @@ async function synthFishWithRetry(text, file, opts) {
   throw lastErr;
 }
 
+async function hydrateCachedTts(name, file) {
+  const cached = await readTtsFile(name).catch((e) => {
+    console.warn(`[tts/blob] read ${name}: ${e.message}`);
+    return null;
+  });
+  if (!cached?.buffer) return false;
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, cached.buffer);
+  return true;
+}
+
+async function persistGeneratedTts(name, file) {
+  const result = await persistTtsFile(name, file).catch((e) => {
+    console.warn(`[tts/blob] write ${name}: ${e.message}`);
+    return null;
+  });
+  if (result?.stored) console.log(`[tts/blob] stored ${name} ${(result.bytes / 1024).toFixed(0)}KB`);
+}
+
 // macOS `say` → aiff → afconvert → m4a（浏览器原生支持）
 async function synthMacSay(text, outFile, { voice = "Tingting" } = {}) {
   await fs.mkdir(TMP_DIR, { recursive: true });
@@ -120,12 +135,15 @@ export async function synth(text, opts = {}) {
   // Fish 路径：mp3
   if (canFish) {
     const key = hashKey({ provider: "fish", voice: voiceId, text });
-    const file = path.join(CACHE_DIR, `${key}.mp3`);
-    const url = `/tts/${key}.mp3`;
+    const name = `${key}.mp3`;
+    const file = path.join(CACHE_DIR, name);
+    const url = `/tts/${name}`;
     if (existsSync(file)) return { url, file, provider: "fish", cached: true };
+    if (await hydrateCachedTts(name, file)) return { url, file, provider: "fish", cached: true };
     const t0 = Date.now();
     try {
       const bytes = await synthFishWithRetry(text, file, { apiKey, voiceId });
+      await persistGeneratedTts(name, file);
       console.log(`[tts/fish] "${text.slice(0,28)}…" ${((Date.now()-t0)/1000).toFixed(1)}s ${(bytes/1024).toFixed(0)}KB`);
       return { url, file, provider: "fish", cached: false, bytes };
     } catch (e) {
@@ -142,11 +160,14 @@ export async function synth(text, opts = {}) {
   // say 路径：m4a
   const voice = opts.macVoice || "Tingting";
   const key = hashKey({ provider: "say", voice, text });
-  const file = path.join(CACHE_DIR, `${key}.m4a`);
-  const url = `/tts/${key}.m4a`;
+  const name = `${key}.m4a`;
+  const file = path.join(CACHE_DIR, name);
+  const url = `/tts/${name}`;
   if (existsSync(file)) return { url, file, provider: "say", cached: true };
+  if (await hydrateCachedTts(name, file)) return { url, file, provider: "say", cached: true };
   const t0 = Date.now();
   const bytes = await synthMacSay(text, file, { voice });
+  await persistGeneratedTts(name, file);
   console.log(`[tts/say] "${text.slice(0,28)}…" ${((Date.now()-t0)/1000).toFixed(1)}s ${(bytes/1024).toFixed(0)}KB`);
   return { url, file, provider: "say", cached: false, bytes };
 }

@@ -1,0 +1,11 @@
+.env
+.env.*
+data/
+cache/
+node_modules/
+.git/
+.claude/
+user/
+ai-website-cloner-template/
+*.log
+.DS_Store

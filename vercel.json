@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "{pwa/**,media/**,server/prompts/**}",
+      "excludeFiles": "{.env,.env.*,data/**,cache/**,user/**,.claude/**,ai-website-cloner-template/**}"
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ]
+}
