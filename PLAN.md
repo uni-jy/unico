@@ -1,17 +1,17 @@
 # Unico · 个人 AI 电台 — 规划文档
 
 > 一句话：读懂我的听歌习惯 → 规划当下该听的声音 → 像 DJ 那样播报出来。
-> 形态：本地 PWA + Node 中枢 + Claude Code 子进程做"大脑"。无需 API key（走 Max 订阅）。
+> 形态：本地 PWA + Node 中枢 + Seed 2.1 Pro API 做"大脑"。通过 OpenAI-compatible 接口调用。
 
 ---
 
 ## 0. 设计原则
 
 1. **本地优先**：除歌曲流和模型推理外，所有状态、缓存、用户语料都落本地文件（便于备份、可读、可手改）。
-2. **模型即大脑，不是 API**：以 `claude -p --output-format json` 子进程调用 Claude Code，不依赖 Anthropic API key。
+2. **模型即大脑，API 是稳定边界**：通过 OpenAI-compatible chat completions 调用 Seed 2.1 Pro，统一处理超时、流式输出和熔断。
 3. **小盒子拼装 prompt**：每次触发都把 6 类碎片（系统词 / 用户语料 / 环境 / 已检索记忆 / 输入 / 执行轨迹）拼成 system prompt，便于审计和回放。
 4. **声音是一等公民**：DJ 播报先合成、再缓存、再播放；播报与音乐之间的衔接（segue）由模型显式给出。
-5. **可中断、可改写**：用户随时插话（自然语言走 router → claude；明确指令直连 ncm）。
+5. **可中断、可改写**：用户随时插话（自然语言走 router → Seed；明确指令直连 ncm）。
 
 ---
 
@@ -22,7 +22,7 @@
 | 模块 | 作用 | 关键文件 / 端点 |
 |---|---|---|
 | **USER** 用户品味语料 | 让 Unico 真正属于"我" | `user/taste.md`、`user/routines.md`、`user/playlists.json`、`user/mood-rules.md` |
-| **BRAIN** Claude Code | 子进程调用，无需 API key | `claude -p --output-format json` |
+| **BRAIN** Seed 2.1 Pro | OpenAI-compatible HTTP 调用 | `SEED_BASE_URL` + `SEED_MODEL` |
 | **MUSIC** NeteaseCloudMusicApi | 歌曲检索 / 直链 / 歌词 / 推荐 | `search`、`song_url`、`lyric`、`recommend` |
 | **VOICE & I/O** | 声音、日程、天气、客厅 | Fish Audio TTS、飞书 (Lark) 日历、OpenWeather、UPnP (Naim) |
 
@@ -32,9 +32,9 @@
 
 | 模块 | 职责 |
 |---|---|
-| `router.js` | 意图分流：简单指令直连 ncm；"换个温柔点的"自然语言走 claude |
+| `router.js` | 意图分流：简单指令直连 ncm；"换个温柔点的"自然语言走 Seed |
 | `context.js` | 提示词组装：taste + routines + 环境 + 历史 → system prompt |
-| `claude.js` | 大脑适配器：spawn 子进程、流式读取、解析 `{say, play[], reason, segue}` |
+| `claude.js` | LLM 适配器：调用 Seed chat completions、流式读取、解析 `{say, play[], reason, segue}` |
 | `scheduler.js` | 节律调度：07:00 规划 / 09:00 早间 / 小时情绪检查 / 日历 hook |
 | `tts.js` | 声音管线：Fish Audio → `cache/tts/<hash>.mp3` |
 | `state.db` | 状态 + 记忆：`messages` `plays` `plan` `prefs`（SQLite，可跨重启） |
@@ -163,12 +163,12 @@ CREATE TABLE prefs (
 
 1. `scheduler.js` 触发 `morning` 事件 → 调 `context.build('morning')`
 2. `context.js` 拼接：dj-persona + taste.md + 今天日历（飞书）+ 当前天气 + 近 48h `plays` + 今日 plan
-3. `claude.js` spawn `claude -p` 流式拿 JSON
+3. `claude.js` 调用 Seed chat completions，流式拿 JSON
 4. 解析 `play[]` → `ncm.search()` 每首拿到 `song_id` → `song_url()` 拿直链 → 入队 `queue`
 5. `tts.js` 把 `say` 喂 Fish Audio → `cache/tts/<hash>.mp3`
 6. WS 推 `{type:'cue', say_url, songs:[...]}` 给 PWA
 7. PWA 单 `<audio>` 接力：先播 `say_url`，结束事件触发播第一首；`segue=fade` 时做 1.5s 交叉淡入
-8. 用户点"跳过" → `POST /api/chat {intent:'skip', reason?}` → 走 router → 必要时回 claude 要替补
+8. 用户点"跳过" → `POST /api/chat {intent:'skip', reason?}` → 走 router → 必要时回 Seed 要替补
 9. 每首结束写 `plays`，每日 23:50 跑一遍"taste.md 增量回写"小任务（模型读 plays，提议追加段落，需用户确认）
 
 ---
@@ -179,7 +179,7 @@ CREATE TABLE prefs (
 |---|---|---|
 | M1 | 骨架：Node server + PWA 壳 + 一条 WS + 一首本地 mp3 能播 | 浏览器打开 `localhost:8080`，点播放出声 |
 | M2 | 接通 ncm：搜歌 / 拿直链 / 真曲目能播 | 在 chat 框输入"放周杰伦"出歌 |
-| M3 | 接通 claude：`claude -p` 跑通，输出 schema 解析正确 | "放点适合现在的"能拿到 `{say, play[]}` |
+| M3 | 接通 Seed：chat completions 跑通，输出 schema 解析正确 | "放点适合现在的"能拿到 `{say, play[]}` |
 | M4 | 接通 TTS + 节律：Fish Audio 合成 say，9 点早间自动触发 | 每天 9 点出一段"早安 + 三首歌" |
 | M5 | 反馈闭环 + UPnP + 飞书：跳过 / 喜欢回写 taste、可推到 Naim | 一周用下来，taste.md 自然变厚 |
 
@@ -187,7 +187,7 @@ CREATE TABLE prefs (
 
 ## 7. 风险与回避
 
-- **claude -p 冷启动慢** → 启动时 warm-up 一次空调用；用流式输出降低首字节延迟
+- **Seed API 延迟或抖动** → 使用超时、熔断和流式输出降低等待；TTS 结果进入本地缓存
 - **ncm 直链失效 / 灰名单** → 每次播放前 HEAD 校验，失败自动换备播
 - **TTS 配额 / 网络抖** → `cache/tts/<hash>.mp3` 永久缓存；同句不重合成
 - **模型乱编歌名** → 强约束输出 schema；ncm 找不到时把"找不到的歌名"反喂给模型让它换

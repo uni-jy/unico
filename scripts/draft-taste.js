@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 把 user/playlists.json 压缩成精简侧写 → 交给 claude 写 user/taste.draft.md
+// 把 user/playlists.json 压缩成精简侧写 → 交给 Seed 写 user/taste.draft.md
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,7 +57,7 @@ async function main() {
   await fs.writeFile(dumpPath, dump, "utf8");
   console.log(`→ 精简快照已写：${dumpPath}（${dump.length} 字符）`);
 
-  console.log("→ 调 claude 生成 taste.draft.md（Opus 慢，等 1-3 分钟）…");
+  console.log("→ 调 Seed 生成 taste.draft.md（等 1-3 分钟）…");
   const t0 = Date.now();
   const md = await askRaw({ system: SYSTEM, user: dump, timeoutMs: 300_000 });
   console.log(`✓ 完成，用时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);

@@ -10,6 +10,8 @@ cp .env.example .env
 npm run dev
 ```
 
+The default LLM is Seed 2.1 Pro. Copy `.env.example` and set `SEED_API_KEY` before testing flows that call the model.
+
 Run tests before opening a pull request:
 
 ```bash

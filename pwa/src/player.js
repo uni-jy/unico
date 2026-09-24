@@ -888,7 +888,7 @@ $("btn-redraft").addEventListener("click", async () => {
           sys("听众侧写已更新");
           return;
         }
-        if (d.status === "error") throw new Error(d.error || "claude 写失败");
+        if (d.status === "error") throw new Error(d.error || "Seed 写失败");
       } catch (_) {}
     }
     throw new Error("超过 5 分钟仍未完成");
@@ -1562,12 +1562,12 @@ async function setupRunDraft() {
           gotoStep("review");
           return;
         }
-        if (d.status === "error") throw new Error(d.error || "claude 写失败");
+        if (d.status === "error") throw new Error(d.error || "Seed 写失败");
       } catch (e) {}
     }
     throw new Error("超过 5 分钟仍未完成");
   } catch (e) {
-    setupError("AI 写侧写失败：" + e.message + "（claude 可能挂了，过会再试）");
+    setupError("AI 写侧写失败：" + e.message + "（Seed 服务可能暂时不可用，过会再试）");
   }
 }
 

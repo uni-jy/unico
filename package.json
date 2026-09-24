@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Personal AI radio — Claude Code as brain, NCM as music, Fish as voice.",
+  "description": "Personal AI radio — Seed 2.1 Pro as brain, NCM as music, Fish as voice.",
   "scripts": {
     "dev": "node server/index.js",
     "start": "node server/index.js"

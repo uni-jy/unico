@@ -1,4 +1,4 @@
-// 首次设置向导后端：扫码登录 NCM → 拉歌单 → claude 写 taste 草稿 → 用户审 → 保存
+// 首次设置向导后端：扫码登录 NCM → 拉歌单 → Seed 写 taste 草稿 → 用户审 → 保存
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
@@ -484,7 +484,7 @@ export async function handle(req, res, uid, url) {
       });
     }
 
-    // —— 启动 claude 写 taste 草稿（异步：立即返回，后台跑）
+    // —— 启动 Seed 写 taste 草稿（异步：立即返回，后台跑）
     if (p === "/api/setup/draft" && req.method === "POST") {
       const dataRaw = t.readFile(t.playlistsJsonPath);
       if (!dataRaw) return json(res, 400, { error: "请先导入歌单" });

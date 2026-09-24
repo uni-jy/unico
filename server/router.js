@@ -1,8 +1,8 @@
 // 意图分流（v3）
-//   1) 控制（next/pause/resume）—— 立即指令，不动 claude
+//   1) 控制（next/pause/resume）—— 立即指令，不动 Seed
 //   2) 直连（"歌名 - 歌手" 或 "放 X / 来一首 X / 想听 X" 且 X 看起来是具体名字）—— ncm 搜
-//   3) 模糊换歌（"换一首"/"换首"/"切歌"/"我想听点 X" 不指定具体歌）—— claude DJ 模式选新歌
-//   4) 默认 —— talk 模式：claude 短回复，不换歌
+//   3) 模糊换歌（"换一首"/"换首"/"切歌"/"我想听点 X" 不指定具体歌）—— Seed DJ 模式选新歌
+//   4) 默认 —— talk 模式：Seed 短回复，不换歌
 import { resolveOne } from "./adapters/ncm.js";
 import { build as buildCtx } from "./context.js";
 import { ask as askClaude } from "./claude.js";
@@ -18,7 +18,7 @@ const SONG_DASH = /^[^-—–]+\s*[-—–]\s*[^-—–]+$/;
 const PLAY_PREFIX = /^\s*(放|播放|播|来一首|想听|我想听|来首|给我放|帮我放)\s*[:：]?\s*(.+?)\s*$/;
 // 在前缀后面如果出现这些"模糊词"，就不是要具体某首歌，而是表达方向
 const FUZZY_WORDS = /点|些|什么|啥|适合|想|帮|心情|感觉|放松|提神|安静|热闹|带感|睡|累|无聊|开心|难过|烦|气|爽|怀旧|怀念|文艺/;
-// 强制走 claude DJ 选新歌：模糊换歌意图
+// 强制走 Seed DJ 选新歌：模糊换歌意图
 const DJ_SWITCH_HINTS = /换个方向|换换|换种|挑一首|推一首|来点别的|来点其他|不爱这首|这首换|不喜欢这首/;
 const RESOLVE_CONCURRENCY = 6;
 const SAFE_DISCOVERY = [
