@@ -1,17 +1,19 @@
-const DEFAULT_MODEL = "deepseek-v4-pro";
-const DEFAULT_BASE_URL = "https://api.deepseek.com/v1";
+const DEFAULT_MODEL = "doubao-seed-2-1-pro-260915";
+const DEFAULT_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
 export function getLLMConfig(env = process.env) {
-  const apiKey = env.DEEPSEEK_API_KEY ||
+  const seedApiKey = env.SEED_API_KEY || env.VOLCENGINE_API_KEY || env.ARK_API_KEY || "";
+  const seedBaseUrl = env.SEED_BASE_URL || env.VOLCENGINE_BASE_URL || env.ARK_BASE_URL || "";
+  const hasSeedConfig = !!(seedApiKey || seedBaseUrl || env.SEED_MODEL || env.VOLCENGINE_MODEL);
+  const apiKey = seedApiKey || (!hasSeedConfig && (env.DEEPSEEK_API_KEY ||
     env.OPENAI_API_KEY ||
     env.ANTHROPIC_API_KEY ||
-    env.ANTHROPIC_AUTH_TOKEN ||
-    "";
-  const baseUrl = (env.DEEPSEEK_BASE_URL ||
+    env.ANTHROPIC_AUTH_TOKEN)) || "";
+  const baseUrl = (seedBaseUrl || (!hasSeedConfig && (env.DEEPSEEK_BASE_URL ||
     env.OPENAI_BASE_URL ||
     env.ANTHROPIC_BASE_URL ||
-    DEFAULT_BASE_URL).replace(/\/+$/, "");
-  const model = env.UNICO_MODEL || DEFAULT_MODEL;
+    "")) || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const model = env.SEED_MODEL || env.VOLCENGINE_MODEL || env.UNICO_MODEL || DEFAULT_MODEL;
   return { apiKey, baseUrl, model };
 }
 
@@ -23,7 +25,7 @@ export function buildChatRequest({
   config = getLLMConfig(),
 } = {}) {
   if (!config.apiKey) {
-    throw new Error("LLM API key 未配置：请设置 DEEPSEEK_API_KEY（或 OPENAI_API_KEY / ANTHROPIC_API_KEY 兼容中转）");
+    throw new Error("LLM API key 未配置：请设置 SEED_API_KEY（或 VOLCENGINE_API_KEY / ARK_API_KEY）");
   }
   const body = {
     model: config.model,

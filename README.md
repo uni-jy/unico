@@ -39,7 +39,7 @@ flowchart LR
 
 - Node.js 20 or newer
 - A NetEase Cloud Music account, or a public NetEase profile URL
-- One OpenAI-compatible LLM API key, such as DeepSeek
+- One Volcengine Ark API key for Seed 2.1 Pro (OpenAI-compatible)
 - Optional: Fish Audio API key for higher-quality TTS
 
 ### Install
@@ -55,9 +55,9 @@ Edit `.env`:
 
 ```bash
 PORT=8080
-UNICO_MODEL=deepseek-v4-pro
-DEEPSEEK_API_KEY=your_key_here
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+SEED_MODEL=doubao-seed-2-1-pro-260915
+SEED_API_KEY=your_volcengine_ark_key_here
+SEED_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
 
 # Optional: voice generation. Without this, Unico falls back to macOS say.
 FISH_API_KEY=
@@ -89,9 +89,12 @@ The public profile path does not require login. It can only read public playlist
 | Variable | Required | Description |
 | --- | --- | --- |
 | `PORT` | No | HTTP/WebSocket port. Defaults to `8080`. |
-| `UNICO_MODEL` | No | Chat model name. Defaults to `deepseek-v4-pro`. |
-| `DEEPSEEK_API_KEY` | Yes* | API key for DeepSeek-compatible chat completions. |
-| `DEEPSEEK_BASE_URL` | No | Defaults to `https://api.deepseek.com/v1`. |
+| `SEED_MODEL` | No | Chat model name. Defaults to `doubao-seed-2-1-pro-260915`. |
+| `SEED_API_KEY` | Yes* | Volcengine Ark API key for Seed chat completions. |
+| `SEED_BASE_URL` | No | Defaults to `https://ark.cn-beijing.volces.com/api/v3`. |
+| `VOLCENGINE_API_KEY` | No | `SEED_API_KEY` 的兼容变量名。 |
+| `VOLCENGINE_BASE_URL` | No | `SEED_BASE_URL` 的兼容变量名。 |
+| `UNICO_MODEL` | No | 通用兼容变量，可覆盖模型名。 |
 | `OPENAI_API_KEY` | Yes* | Alternative OpenAI-compatible API key. |
 | `OPENAI_BASE_URL` | No | Alternative OpenAI-compatible base URL. |
 | `FISH_API_KEY` | No | Fish Audio API key for voice synthesis. |
@@ -173,7 +176,7 @@ node --check pwa/src/player.js
 
 - [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
 - [Fish Audio](https://fish.audio)
-- DeepSeek / OpenAI-compatible chat completion APIs
+- Volcengine Ark Seed 2.1 Pro / OpenAI-compatible chat completion APIs
 
 ## License
 

@@ -94,7 +94,7 @@ export class Tenant {
     if (!fs.existsSync(this.playlistsJsonPath)) return false;
     const taste = this.readFile(this.tastePath);
     if (!taste || taste.length < 150) return false;
-    // 检测 DeepSeek 的伪装话术 —— 这些都是无效 taste
+    // 检测模型的伪装话术 —— 这些都是无效 taste
     const fake = /已(经)?(为你|帮你)?(写好|起草|创建|生成|保存).{0,30}文件|文件已(写好|起草|生成|保存)|内容.{0,10}(在|位于).{0,30}\.md|等待你确认|同意写入权限|请在权限提示|权限提示中确认|文件写入需要你批准|批准写入|可以复制保存为|我没有任何实际听歌行为/;
     if (fake.test(taste.slice(0, 400))) return false;
     // 必须以 markdown heading 起头（真 taste 都是这样）

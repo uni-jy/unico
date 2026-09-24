@@ -498,7 +498,7 @@ export async function handle(req, res, uid, url) {
       // 后台跑，不阻塞响应
       (async () => {
         try {
-          // 最多重试 3 次（DeepSeek 偶尔输出伪装话术）
+          // 最多重试 3 次（模型偶尔输出伪装话术）
           let md = "";
           for (let i = 0; i < 3; i++) {
             md = await askRaw({ system: TASTE_DRAFT_SYSTEM, user: dump, timeoutMs: 300_000 });

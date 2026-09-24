@@ -1,4 +1,4 @@
-// LLM 适配器：直接调用 DeepSeek / OpenAI-compatible HTTP API
+// LLM 适配器：直接调用火山引擎 Seed / OpenAI-compatible HTTP API
 // 用法：const out = await ask({ system, user });
 //   out = { say, play:[{query,reason}], reason, segue }
 import { completeChat, streamChat, getLLMConfig } from "./llm-client.js";

@@ -7,10 +7,32 @@ import {
   parseSSEDelta,
 } from "../server/llm-client.js";
 
-test("getLLMConfig prefers DeepSeek env and defaults to deepseek-v4-pro", () => {
+test("getLLMConfig defaults to Seed 2.1 Pro", () => {
+  assert.deepEqual(getLLMConfig({}), {
+    apiKey: "",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    model: "doubao-seed-2-1-pro-260915",
+  });
+});
+
+test("getLLMConfig prefers Seed env", () => {
+  const env = {
+    SEED_API_KEY: "seed-key",
+    SEED_BASE_URL: "https://ark.example/api/v3",
+    SEED_MODEL: "doubao-seed-2-1-pro-260915",
+  };
+  assert.deepEqual(getLLMConfig(env), {
+    apiKey: "seed-key",
+    baseUrl: "https://ark.example/api/v3",
+    model: "doubao-seed-2-1-pro-260915",
+  });
+});
+
+test("getLLMConfig keeps DeepSeek as a backward-compatible fallback", () => {
   const env = {
     DEEPSEEK_API_KEY: "ds-key",
     DEEPSEEK_BASE_URL: "https://relay.example/v1",
+    UNICO_MODEL: "deepseek-v4-pro",
   };
   assert.deepEqual(getLLMConfig(env), {
     apiKey: "ds-key",

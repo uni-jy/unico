@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-test("Claude CLI wrapper defaults to deepseek-v4-pro", async () => {
+test("LLM wrapper defaults to Seed 2.1 Pro", async () => {
   const mod = await import("../server/claude.js");
-  assert.equal(mod.MODEL, "deepseek-v4-pro");
+  assert.equal(mod.MODEL, "doubao-seed-2-1-pro-260915");
 });
